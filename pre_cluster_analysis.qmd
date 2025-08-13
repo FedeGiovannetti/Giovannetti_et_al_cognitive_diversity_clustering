@@ -1,12 +1,14 @@
 ---
 title: "Pre-clustering analyses"
 subtitle: "Hetereogeneity testing and selection of k"
-# format: html
+# format: 
+#   html:
+#     code-fold: true
 # execute:
 #   echo: true
 #   warning: false
 #   message: false
-# toc: true
+toc: true
 # date: "`r Sys.time()`"
 # css: style.css
 ---

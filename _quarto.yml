@@ -51,9 +51,11 @@ format:
     theme: litera
     css: styles.css
     toc: true
+    code-fold: true
+    code-tools: true
     
 execute:
-  echo: false
+  # echo: false
   message: false
   warning: false
 
