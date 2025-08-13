@@ -1,0 +1,59 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  # title: "CONICET_serie_historica"
+  # google-analytics: "G-LBP73MEE67"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Index
+    #   - href: analisis_todas_las_areas.qmd
+    #     text: Análisis general
+    #   - href: analisis_ks.qmd
+    #     text: Análisis sociales y humanidades
+    #   - href: analisis_fechas_ingresos.qmd
+    #     text: Análisis fechas CIC
+    #   # - href: about.qmd
+    #   #   text: Acerca de
+    right:
+
+      - icon: linkedin
+        href: https://www.linkedin.com/in/fedegiovannetti/
+        
+      - icon: envelope
+        href: mailto:giovannettipsi@gmail.com
+        
+      - icon: book
+        href: https://scholar.google.es/citations?user=O257bnQAAAAJ&hl=es
+        
+      # - icon: github
+      #   menu:
+      #     - text: Código fuente
+      #       href: https://github.com/FedeGiovannetti/CONICET_serie_historica
+      #     - text: Reportar un error
+      #       href: https://github.com/FedeGiovannetti/CONICET_serie_historica/issues
+  sidebar:
+    contents:
+      - ensemble_clustering_results.qmd
+      - section: "Supplementary materials"
+        contents:
+          - Data_preprocessing.Rmd
+          - pre_cluster_analysis.qmd
+
+          
+
+
+
+format:
+  html:
+    theme: litera
+    css: styles.css
+    toc: true
+    
+execute:
+  echo: false
+  message: false
+  warning: false
+

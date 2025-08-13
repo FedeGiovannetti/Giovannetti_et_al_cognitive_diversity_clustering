@@ -1,0 +1,369 @@
+---
+title: "Pre-clustering analyses"
+subtitle: "Hetereogeneity testing and selection of k"
+# format: html
+# execute:
+#   echo: true
+#   warning: false
+#   message: false
+# toc: true
+# date: "`r Sys.time()`"
+# css: style.css
+---
+
+#### Paquetes y funciones
+
+```{r libraries and functions, message= F}
+
+rm(list=ls())
+set.seed(123)
+
+library(tidyverse)
+library(diceR)
+library(factoextra)
+library(FactoMineR)
+library(flextable)
+library(clusterability)
+source("../helper/helper_tables.R")
+source("../helper/helper_functons.R")
+
+
+```
+
+## 0. Data
+
+```{r data loading}
+
+# Cargando datos
+datos = read.csv("../data/datos_normalizados.csv")
+datos.reducidos = read.csv("../data/datos_reducidos.csv")
+subject.info <- read.csv("../data/subject_information_PICT2014.csv")
+
+```
+
+## 0.0. Sample information
+
+```{r sample info}
+
+  datos.reducidos %>% 
+    left_join(subject.info, by = "username") %>% 
+    summarise(n = as.character(n()),
+              girls = as.character(sum(Sex == "fem", na.rm = TRUE)),
+              Age = paste(mean(Age, na.rm = TRUE),
+                          " (",
+                          round(
+                            sd(
+                              Age,
+                              na.rm = TRUE),
+                            digits = 3),
+                          ")", sep = "")
+              ) %>% 
+    pivot_longer(everything()) %>%
+    flextable() %>% 
+    # custom_flextable("")%>%
+    set_header_labels(name = "Sample information", value = "") %>%  # Remove column names
+ 
+    autofit() 
+
+
+
+
+
+```
+
+
+
+
+## 1. Optimal number of k
+
+```{r}
+
+# Método del codo
+
+fviz_nbclust(datos, kmeans, method = "wss") +
+  labs(subtitle = "Elbow method")
+
+
+# Método silueta
+
+fviz_nbclust(datos, kmeans, method = "silhouette")+
+  labs(subtitle = "Silhouette method")
+
+
+```
+
+## 2. Algorithm diagnostics
+
+### 2.1. Kmeans 
+
+#### 2.1.1. Kmeans with Euclidean distances
+
+::: scrolling
+```{r}
+
+BC_kmeans <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "euclidean",
+    algorithms = c("km") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_kmeans, 5)
+
+
+```
+:::
+
+### 2.2. PAM 
+
+#### 2.2.1. PAM with Euclidean distances
+
+::: scrolling
+```{r}
+
+
+BC_pam_euclidean <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "euclidean",
+    algorithms = c("pam") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_pam_euclidean, 5)
+
+
+
+```
+:::
+
+#### 2.2.2. PAM with Manhattan distances
+
+::: scrolling
+```{r}
+
+
+BC_pam_manhattan <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "manhattan",
+    algorithms = c("pam") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_pam_manhattan, 5)
+
+
+
+```
+:::
+
+### 2.3. Diana 
+
+#### 2.3.1. Diana with euclidean distances
+
+::: scrolling
+```{r}
+
+BC_diana_euclidean <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "euclidean",
+    algorithms = c("diana") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_diana_euclidean, 5)
+
+```
+:::
+
+#### 2.2.2. Diana with manhattan distances
+
+::: scrolling
+```{r}
+
+BC_diana_manhattan <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "manhattan",
+    algorithms = c("diana") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_diana_manhattan, 5)
+
+```
+:::
+
+### 2.4. Hierarchical 
+
+#### 2.4.1. Hierarchical with euclidean distances and average agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_euclidean_average <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "euclidean",
+    hc.method = "average",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_euclidean_average, 5)
+
+```
+:::
+
+#### 2.4.2. Hierarchical with manhattan distances and average agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_manhattan_average <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "manhattan",
+    hc.method = "average",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_manhattan_average, 5)
+
+```
+:::
+
+#### 2.4.3. Hierarchical with euclidean distances and ward.D agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_euclidean_ward <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "euclidean",
+    hc.method = "ward.D",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_euclidean_ward, 5)
+
+```
+:::
+
+
+#### 2.4.4. Hierarchical with manhattan distances and ward.D agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_euclidean_ward <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "manhattan",
+    hc.method = "ward.D",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_euclidean_ward, 5)
+
+```
+:::
+
+#### 2.4.5. Hierarchical with euclidean distances and ward.D2 agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_euclidean_ward2 <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "euclidean",
+    hc.method = "ward.D2",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_euclidean_ward2, 5)
+
+```
+:::
+
+#### 2.4.6. Hierarchical with manhattan distances and ward.D2 agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_euclidean_ward2 <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "manhattan",
+    hc.method = "ward.D2",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_euclidean_ward2, 5)
+
+```
+:::
+
+#### 2.4.7. Hierarchical with euclidean distances and complete agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_euclidean_complete <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "euclidean",
+    hc.method = "complete",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_euclidean_complete, 5)
+
+```
+:::
+
+
+#### 2.4.8. Hierarchical with manhattan distances and complete agglomeration method
+
+::: scrolling
+```{r}
+
+BC_hc_euclidean_complete <- consensus_cluster(datos,
+    nk = 2:5, # Number of clusters for BCs
+    p.item = 0.8,  # Randomly selected 80% of the original data
+    reps = 100, # Generate 100 BCs,
+    seed.data = 999,
+    distance = "manhattan",
+    hc.method = "complete",
+    algorithms = c("hc") # BC algorithms we use k-means
+)
+
+internal_ensemble_validity(BC_hc_euclidean_complete, 5)
+
+```
+:::
+
+:::

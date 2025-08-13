@@ -1,0 +1,127 @@
+---
+title: "Data Pre-processing"
+subtitle: "Participants filtering"
+output: html_document
+---
+
+
+```{r, message= F}
+
+library(tidyverse) 
+library(targets)
+library(flextable)
+
+```
+
+## 1. Participant filtering
+
+I this first step, participants not eligible for their inclusion in the study are removed based on their cognitive performance. The specific filter implemented for each task is described below.
+
+### 1.1. ANT
+
+Participants were included only if they completed all trials. A total of 7 participants were excluded.
+
+```{r}
+
+ANT = read.csv("../data/ANT_PRE_PICT2014_processed.csv") 
+
+ANT %>% 
+  mutate(Included = completed_trials_all >= 95) %>% 
+  summarise(n = n(), .by = Included) %>% 
+  flextable()
+
+ANT = ANT %>%
+  filter(completed_trials_all >= 95) %>% 
+    select(-Date) %>% 
+  rename_with(~paste0('ANT_',.x), -c(username, Year))
+
+```
+
+
+### 1.2. CORSI
+
+Participants were included only if they completed more than 3 trials (above cutoff criteria). A total of 2 participants were excluded.
+
+```{r}
+
+CORSI = read.csv("../data/CORSI_PRE_PICT2014_processed.csv") 
+
+CORSI %>% 
+  filter(row_type == "all_trials") %>% 
+  select(-row_type, -Date) %>% 
+  mutate(Included = completed_trials > 3) %>% 
+  summarise(n = n(), .by = Included) %>% 
+  flextable()
+
+CORSI = CORSI %>%
+  filter(row_type == "all_trials") %>% 
+  select(-row_type, -Date, -stimulus_amount, -stimulus_amount,-outlier_amount) %>% 
+  filter(completed_trials > 3) %>% 
+  rename_with(~paste0('CORSI_',.x), -c(username, Year)) 
+
+
+```
+
+### 1.3. TOL
+
+Participants were included only if they completed more than 5 trials (above cutoff criteria). A total of 2 participants were excluded, while other 4 did not complete the task.
+
+```{r}
+
+TOL = read.csv("../data/TOL_PRE_PICT2014_processed.csv") 
+
+TOL %>% 
+  filter(row_type == "all_trials") %>% 
+  select(-row_type, -Date, -Movimientos, -Search.Depth, -Goal.Hierarchy) %>%
+  mutate(Included = completed_trials > 5) %>% 
+  summarise(n = n(), .by = Included) %>% 
+  flextable()
+
+  
+TOL = TOL %>% 
+  filter(row_type == "all_trials") %>% 
+  select(-row_type, -Date, -Movimientos, -Search.Depth, -Goal.Hierarchy, -outlier_amount, -omitted_trials_amount) %>% 
+  filter(completed_trials > 5) %>% 
+  rename_with(~paste0('TOL_',.x), -c(username, Year))
+
+
+```
+
+### 1.4. KBIT
+
+Participants were included only if they passed the first block of trials (1 correct trial). A total of 2 participants were excluded, while other 2 did not complete the task.
+
+```{r}
+
+KBIT = read.csv("../data/KBIT_PRE_PICT2014_processed.csv") 
+
+KBIT %>% 
+  select(-Date) %>%
+  mutate(Included = correct_trials_amount > 1) %>% 
+  summarise(n = n(), .by = Included) %>% 
+  flextable()
+  
+KBIT = KBIT %>% 
+  select(-Date) %>%
+  filter(correct_trials_amount > 1) %>% 
+  distinct(username, .keep_all = TRUE) %>% 
+  rename_with(~paste0('KBIT_',.x), -c(username, Year))
+
+
+```
+
+## 2. Joining cognitive tasks dataset 
+
+```{r}
+
+base_general <- ANT %>% 
+  full_join(CORSI, by = c("username", "Year")) %>%
+  full_join(TOL, by = c("username", "Year")) %>% 
+  full_join(KBIT, by = c("username", "Year"))
+
+
+
+write.csv(base_general, "../data/PICT_2014_PRE_filtered.csv", row.names = F)
+
+
+```

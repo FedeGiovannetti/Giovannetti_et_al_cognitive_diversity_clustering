@@ -1,0 +1,7 @@
+---
+title: "Exploring cognitive diversity in a sample of children from Unsatisfied Basic Needs homes"
+---
+
+This public document accompanies the article "Exploring cognitive diversity in a sample of children from Unsatisfied Basic Needs homes" published in (update when published). It shows the main and supplementary analyses along with its corresponding code.
+
+

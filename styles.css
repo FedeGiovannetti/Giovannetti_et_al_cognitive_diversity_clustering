@@ -1,0 +1,39 @@
+/* css styles */
+.scrolling {
+  max-height: 700px;
+  max-width: 900px;  /* ancho máximo */
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin-top: 1em;
+  background: #f9f9f9;
+}
+details summary h2 {
+  all: unset; /* reset all summary and h2 styles */
+  font-family: var(--bs-font-sans-serif);
+  font-weight: 600; /* same as litera's h2 */
+  font-size: 1.5rem; /* adjust if needed */
+  color: var(--bs-body-color);
+  cursor: pointer;
+  display: inline;
+  margin: 0;
+}
+
+
+details[open] summary h2::after {
+  content: " ▲";
+}
+
+details:not([open]) summary h2::after {
+  content: " ▼";
+}
+details summary::-webkit-details-marker {
+  display: none;
+}
+
+table.dataTable tbody td.dt-center {
+  text-align: center !important;
+}
+table.dataTable tbody td.dt-left {
+  text-align: left !important;
+}

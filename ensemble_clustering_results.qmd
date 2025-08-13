@@ -1,0 +1,474 @@
+---
+title: "Main Analyses"
+subtitle: "Clustering implementation and groups comparisons"
+# format: html
+# execute:
+#   echo: true
+#   warning: false
+#   message: false
+# toc: true
+# date: "`r Sys.time()`"
+# css: style.css
+---
+
+## 0. Packages, functions and data
+
+```{r libraries and functions, message= F}
+
+rm(list = ls())
+unlink("../Tables/*")
+unlink("../Figures/*")
+
+# set.seed(123)
+library(tidyverse)
+library(diceR)
+library(flextable)
+library(rstatix)
+library(ggpubr)
+source("../helper/helper_tables.R")
+source("../helper/helper_functons.R")
+
+```
+
+```{r data loading, message= F}
+
+# Pre-processed data with subject ids
+datos.reducidos = read.csv("../data/datos_reducidos.csv")
+# Pre-processed data without subject ids
+datos = read.csv("../data/datos_normalizados.csv")
+# Subject info
+subject_info <- read.csv("../data/subject_information_PICT2014.csv", check.names = F)
+
+```
+
+
+# 1. Ensemble model
+
+
+```{r, message= F}
+
+
+Ensemble_model = dice(datos,
+                nk = 3, # 2-5 clusters
+                reps = 100, # 100 repetitions for each algorithm
+                p.item = 0.8, # % of subsamples in each repetition
+                algorithms = c(
+                  "km",
+                 "pam"), # 3 clustering algorithms
+                cons.funs = "LCE", # consensus function
+                distance = c("euclidean", "manhattan"),
+                seed.data= 999 # set random seed                ,
+                # seed = 999  # Force sequential processing
+                
+  )
+
+datos$Clusters = paste("Cluster",Ensemble_model$clusters)
+datos.reducidos$Clusters = paste("Cluster",Ensemble_model$clusters)
+
+datos_clusters = datos.reducidos %>% 
+  select(username, Clusters)
+
+table(datos_clusters$Clusters) %>% 
+  as.data.frame() %>% 
+  rename(Clusters = "Var1") %>% 
+  flextable()
+
+```
+
+# 2. Cluster comparisons
+
+## 2.1.Table 1. Descriptive and inferential analyses for clustering result
+
+```{r}
+
+# Transform to long format
+
+datos.long.z = datos %>%
+  pivot_longer(!Clusters,names_to = "Feature") %>% 
+  mutate(Tipo = ifelse(grepl("rt", Feature), "Time", "Accuracy")) %>% 
+  feature_rename() %>% 
+  arrange(factor(Feature, levels = feature_order)) 
+
+
+datos.long = datos.reducidos %>%
+  select(-username) %>% 
+  pivot_longer(!Clusters,names_to = "Feature") %>% 
+  mutate(Tipo = ifelse(grepl("rt", Feature), "Time", "Accuracy")) %>% 
+  feature_rename() %>% 
+  arrange(factor(Feature, levels = feature_order)) 
+
+
+# Mean and SE values
+
+datos.summarised.z = datos.long.z %>%
+  group_by(Tipo, Feature, Clusters) %>% 
+  summarise(Mean = mean(value),
+            # SD = sd(value),
+            SE = sqrt(sum((value-mean(value))^2/(length(value)-1)))/sqrt(length(value))) %>% 
+  ungroup()
+
+datos.summarised = datos.long %>%
+  group_by(Tipo, Feature, Clusters) %>% 
+  summarise(n = n(),
+            Mean = mean(value),
+            # SD = sd(value),
+            SE = sqrt(sum((value-mean(value))^2/(length(value)-1)))/sqrt(length(value))
+            ) %>% 
+  ungroup()
+
+# Inferential analysis
+
+datos.kruskal.z = datos.long.z %>%
+  group_by(Feature) %>% 
+  nest() %>% 
+  mutate(modelos = map(data ,~kruskal.test(value ~ Clusters, data = .)),
+         summary = map(modelos, broom::tidy),) %>% 
+  unnest(summary) %>% 
+  mutate(Significance = case_when(
+    p.value < .001 ~ "***",
+    p.value >= .001 & p.value < .01  ~ "**",
+    p.value >= .01 & p.value < .05 ~ "*",
+    p.value >= .05 ~ ""
+  )) %>% 
+  select(-data,-modelos, -parameter, -method) 
+
+
+
+# Plot data
+
+datos.plot = datos.summarised.z %>% 
+  left_join(datos.kruskal.z, by = c("Feature")) %>% 
+  arrange(factor(Feature, levels = feature_order)) 
+
+# Formatted table
+  
+
+# Tidyverse pipeline
+(Table1 <- datos.summarised %>%
+  left_join(datos.kruskal.z, by = c("Feature")) %>% 
+  arrange(factor(Feature, levels = feature_order)) %>% 
+  mutate(Task = gsub("_.*", "", Feature)) %>%  # Extract task name
+  select(-"Tipo", -"Significance") %>%
+  select(Task, everything()) %>%
+  rename(Statistic = "statistic") %>% 
+
+  mutate(Feature =str_remove(Feature, "^[A-Z]+_")) %>%
+
+  custom_flextable("Table 1. Descriptive and inferential analyses for clustering result") %>% 
+  merge_v(j = "Feature", target = c("Statistic","p.value")) %>%
+  merge_v(j = 1:2) %>%
+   # merge_v(j = c("Feature", "p.value")) %>%
+  valign(valign = "top") 
+  )
+
+
+
+save_table(Table1, "../Tables/Table_1.docx")
+
+
+```
+
+## 2.2.Table 2. Pairwise comparisons for clustering result.
+
+```{r}
+
+
+(Table2 <- datos.long.z %>%
+  group_by(Feature) %>%
+  nest() %>%
+  mutate(
+    
+  # Pairwise mann-withney calculus
+    
+    modelo = map(data, ~ pairwise_wilcox_test(value ~ Clusters, data = .x, paired = FALSE) %>%
+             select(group1, group2, statistic, p.adj)
+             ),
+    
+    # Storing p values
+    
+    p.value = map( 
+      modelo, 
+       ~ .x %>%
+             mutate(contrasts = paste(group1, "vs.", group2, "_p")) %>%
+             select(contrasts, p.adj) %>%
+             pivot_wider(names_from = contrasts, values_from = p.adj)
+           ),
+    
+    # Storing U value
+    
+    U = map( 
+      modelo, 
+       ~ .x %>%
+             mutate(contrasts = paste(group1, "vs.", group2, "_U")) %>%
+             select(contrasts, statistic) %>%
+             pivot_wider(names_from = contrasts, values_from = statistic)
+           ),
+    
+    # Calculate effect size (r) 
+    
+    effsize = map(data, ~ wilcox_effsize(value ~ Clusters, data = .x, paired = FALSE) %>%
+             select(group1, group2, effsize, n1, n2)
+             ),
+    
+     r.value = map(
+      effsize,
+       ~ .x %>%
+        mutate(contrasts = paste(group1, "vs.", group2, "_r")) %>%
+        select(contrasts, effsize) %>%
+        pivot_wider(names_from = contrasts, values_from = effsize)
+      ),
+    
+    # Storing z score
+    
+    z.value = map(
+      effsize,
+      ~ .x %>% 
+        mutate(contrasts = paste(group1, "vs.", group2, "_z")) %>%
+        mutate(z.value = effsize * sqrt(n1 + n2)) %>% 
+        select(contrasts, z.value) %>%
+        pivot_wider(names_from = contrasts, values_from = z.value)
+      ),
+    
+    ) %>% 
+  
+  select(Feature, z.value, p.value, r.value) %>%
+  
+  mutate(Task = gsub("_.*", "", Feature)) %>%  # Extract task name
+    select(Task, everything()) %>%
+
+  mutate(Feature =str_remove(Feature, "^[A-Z]+_")) %>%
+  unnest(z.value, p.value, r.value) %>% 
+  select(Task, Feature, 
+         `Cluster 1 vs. Cluster 2 _z`, `Cluster 1 vs. Cluster 2 _p`, `Cluster 1 vs. Cluster 2 _r`,
+         `Cluster 1 vs. Cluster 3 _z`, `Cluster 1 vs. Cluster 3 _p`, `Cluster 1 vs. Cluster 3 _r`,
+         `Cluster 2 vs. Cluster 3 _z`, `Cluster 2 vs. Cluster 3 _p`, `Cluster 2 vs. Cluster 3 _r`) %>% 
+  
+  # Flextable implementation with bold and other format stuff
+  
+  custom_flextable("Pairwise comparisons for clustering result") %>%
+  bold(j = 3:5,~ `Cluster 1 vs. Cluster 2 _p` < .05) %>%
+  bold(j = 6:8,~ `Cluster 1 vs. Cluster 3 _p` < .05)%>%
+  bold(j = 9:11,~ `Cluster 2 vs. Cluster 3 _p` < .05) %>%
+  mk_par(j = 4,i = ~`Cluster 1 vs. Cluster 2 _p` < .001, value = as_paragraph("<.001")) %>%
+  mk_par(j = 7,i = ~`Cluster 1 vs. Cluster 3 _p` < .001, value = as_paragraph("<.001")) %>%
+  mk_par(j = 10,i = ~`Cluster 2 vs. Cluster 3 _p` < .001, value = as_paragraph("<.001")) %>%
+  
+  separate_header(split = "_") %>% 
+  merge_v(j = 1:2) %>% 
+  valign(valign = "top") %>% 
+   autofit()
+)
+
+save_table(Table2, "../Tables/Table_2.docx")
+
+```
+
+
+## 2.3.Figure 1. Feature comparisons between subjects
+
+
+```{r, fig.width= 8, fig.height=6}
+
+plot.caracteristicas = function(df){
+  
+  df %>% 
+    ggplot(aes(x = Feature, 
+               y = Mean, 
+               color = factor(Clusters),
+               group = factor(Clusters),
+               label = Significance))+
+      geom_hline(yintercept =  0, linetype = "dashed", alpha = 0.6)+
+      geom_point(size = 4) +
+      geom_line(linewidth = 1.5, alpha = 0.5)+
+      geom_errorbar(aes(ymin = Mean - SE,
+                        ymax = Mean + SE), 
+                    alpha = 0.8)+
+      geom_text(aes(y = 1.5), color = "black")+
+
+      coord_flip(ylim = c(-1.5,1.5))+
+      theme_minimal(base_size = 15) +
+        labs(colour = "Clusters")+
+        theme(
+          # legend.position = c(0.5, 0.5),  # Position legend at bottom-left
+          legend.justification = c(0.7, 0),  # Align legend to bottom-left
+          axis.title.y = element_blank()  # Remove y-axis title
+        )
+}
+
+
+plot.des = datos.plot %>% 
+  filter(Tipo == "Accuracy") %>% 
+  mutate(Feature = str_replace(Feature, "_", " ")) %>% 
+  mutate(Feature = factor(Feature, levels =  c("ANT Correct congruent trials",
+                                               "ANT Correct incongruent trials",
+                                               "ANT Omitted congruent trials",
+                                               "ANT Omitted incongruent trials",
+                                               "CORSI Correct trials",
+                                               "TOL Correct trials",          
+                                               "KBIT Correct trials")
+                          )
+         )%>% 
+  plot.caracteristicas()
+
+# plot.des
+
+
+plot.RT = datos.plot %>% 
+  filter(Tipo == "Time") %>% 
+  mutate(Feature = str_replace(Feature, "_", " ")) %>%
+  mutate(Feature = factor(Feature, levels =  c("ANT RT congruent trials",
+                                               "ANT RT incongruent trials",
+                                               
+                                               "ANT Executive network",
+                                               "ANT Alerting network",
+                                               
+                                               "ANT Orienting network",
+                                               
+
+                                               "CORSI Execution time correct trials",
+                                               "CORSI Execution time incorrect trials",
+                                               "TOL Planning time correct trials",
+                                               "TOL Planning time incorrect trials"
+                                               )
+                          )
+         )%>%
+
+  plot.caracteristicas()
+  
+# plot.RT
+
+
+(Figure1 = ggarrange(plotlist = list(plot.des + rremove("x.title")+ rremove("x.text"),
+                          plot.RT),
+          common.legend = T, 
+          legend = "bottom",
+          labels = c("Accuracy", "Time"),
+          hjust = 0,
+          vjust = .5,
+          ncol = 1,
+          heights = c(.7,1))+
+  
+  theme(plot.margin = margin(0.5,0,0,0.5, "cm")))
+
+
+Figure1%>%
+  ggexport(filename = "../Figures/Figure1.png", width = 720, height = 720)
+
+
+```
+
+
+# 3. Comparison of socioeconomic status variables between clusters
+
+```{r}
+
+subject_info = subject_info %>% 
+  left_join(datos_clusters, by = "username") %>% 
+  filter(username %in% datos_clusters$username) 
+
+
+```
+
+## 3.1. Table S1. Comparison of Sex between clusters 
+
+```{r}
+
+vars = c("Sex")
+
+
+subject_info %>%
+  summarise(across(all_of(vars), ~ list(fisher.test(table(Clusters, .x),
+                                                    simulate.p.value = T, B = 100000))))%>%
+    # summarise(across(all_of(vars), ~ list(chisq.test(table(Clusters, .x)))))%>% 
+  pivot_longer(cols = everything(), names_to = "Variables", values_to = "test") %>% 
+  rowwise()%>% 
+  mutate(p.value = test$p.value) %>% 
+   left_join(
+    subject_info %>% 
+      summarise(across(all_of(vars), ~sum(!is.na(.x)))) %>% 
+      pivot_longer(cols = everything(), names_to = "Variables", values_to = "n") 
+    ) %>% 
+  select(-test) %>%
+  custom_flextable("Comparison of socioeconomic status variables between clusters (Fisher's exact test)") %>% 
+  bold(j = ~p.value, i = ~p.value < .05) 
+
+
+```
+
+
+
+## 3.2. Table S2. Comparison of temperamental and contextual variables between clusters (Kruskal Wallis's test)
+
+```{r}
+
+
+vars = c("Age", "NES", "Surgency", "Effortful control", "Negative affect")
+
+datos.summarised.info =  subject_info %>%
+  select(Clusters, all_of(vars)) %>%
+  pivot_longer(-Clusters,names_to = "Variables", values_to = "value") %>%
+  
+  group_by(Clusters, Variables) %>% 
+  summarise(Mean = mean(value, na.rm = T),
+            SD = sd(value, na.rm = T),
+            n = sum(!is.na(value))
+            ) %>% 
+  ungroup() %>% 
+  select(Variables, Clusters, everything()) %>% 
+  arrange(Variables)
+
+
+kruskal.info = subject_info %>%
+  summarise(across(all_of(vars), ~ list(kruskal.test(.x, Clusters))))%>% 
+  pivot_longer(cols = everything(), names_to = "Variables", values_to = "test") %>% 
+  rowwise()%>% 
+  mutate(statistic = test$statistic,p.value = test$p.value) %>% 
+  select(-test)
+
+
+
+datos.summarised.info %>% 
+  left_join(kruskal.info, by = "Variables") %>% 
+  mutate(Variables = factor(Variables, levels = vars)) %>%
+  arrange(Variables) %>% 
+  custom_flextable("Table S2. Comparison of individual and contextual variables between clusters (Kurskal Wallis's test)") %>%
+  bold(j = 7,~ `p.value` < .05) %>%
+  mk_par(j = 7,i = ~`p.value` < .001, value = as_paragraph("<.001")) %>%
+  merge_v(j = c(1,6:7)) %>%
+  valign(valign = "top")
+
+
+
+```
+
+
+
+```{r}
+
+
+pairwise.wilcox.test(subject_info$Surgency, subject_info$Clusters, p.adjust.method = "holm") %>% 
+  broom::tidy() %>%
+        mutate(contrasts = paste(group2, "vs.", group1)) %>%
+        select(contrasts, p.value) %>%
+        pivot_wider(names_from = contrasts, values_from = p.value) %>% 
+  mutate(Variable = c("Surgency")) %>% 
+  select(Variable, everything()) %>% 
+
+
+  custom_flextable("Pairwise comparisons for clustering result") %>% 
+  bold(j = 2,~ `Cluster 1 vs. Cluster 2` < .05) %>% 
+  bold(j = 3,~ `Cluster 1 vs. Cluster 3` < .05)%>% 
+  bold(j = 4,~ `Cluster 2 vs. Cluster 3` < .05) %>% 
+  mk_par(j = 2,i = ~`Cluster 1 vs. Cluster 2` < .001, value = as_paragraph("<.001")) %>%
+  mk_par(j = 3,i = ~`Cluster 1 vs. Cluster 3` < .001, value = as_paragraph("<.001")) %>%
+  mk_par(j = 4,i = ~`Cluster 2 vs. Cluster 3` < .001, value = as_paragraph("<.001")) %>%
+  merge_v(j = 1:2) %>% 
+  valign(valign = "top")
+
+
+
+
+
+
+```
+
