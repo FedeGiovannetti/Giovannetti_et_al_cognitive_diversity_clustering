@@ -16,8 +16,8 @@ subtitle: "Clustering implementation and groups comparisons"
 ```{r libraries and functions, message= F}
 
 rm(list = ls())
-unlink("../Tables/*")
-unlink("../Figures/*")
+unlink("Tables/*")
+unlink("Figures/*")
 
 # set.seed(123)
 library(tidyverse)
@@ -25,8 +25,8 @@ library(diceR)
 library(flextable)
 library(rstatix)
 library(ggpubr)
-source("../helper/helper_tables.R")
-source("../helper/helper_functons.R")
+source("helper/helper_tables.R")
+source("helper/helper_functons.R")
 
 ```
 
@@ -163,7 +163,7 @@ datos.plot = datos.summarised.z %>%
 
 
 
-save_table(Table1, "../Tables/Table_1.docx")
+save_table(Table1, "Tables/Table_1.docx")
 
 
 ```
@@ -259,7 +259,7 @@ save_table(Table1, "../Tables/Table_1.docx")
    autofit()
 )
 
-save_table(Table2, "../Tables/Table_2.docx")
+save_table(Table2, "Tables/Table_2.docx")
 
 ```
 
@@ -352,7 +352,7 @@ plot.RT = datos.plot %>%
 
 
 Figure1%>%
-  ggexport(filename = "../Figures/Figure1.png", width = 720, height = 720)
+  ggexport(filename = "Figures/Figure1.png", width = 720, height = 720)
 
 
 ```

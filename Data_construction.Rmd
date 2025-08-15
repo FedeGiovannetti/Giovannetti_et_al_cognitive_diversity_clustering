@@ -8,7 +8,6 @@ output: html_document
 ```{r, message= F}
 
 library(tidyverse) 
-library(targets)
 library(flextable)
 
 ```

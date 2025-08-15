@@ -1,16 +1,8 @@
 ---
 title: "Pre-clustering analyses"
-subtitle: "Hetereogeneity testing and selection of k"
-# format: 
-#   html:
-#     code-fold: true
-# execute:
-#   echo: true
-#   warning: false
-#   message: false
+subtitle: "Algorithm testing and selection of k"
 toc: true
-# date: "`r Sys.time()`"
-# css: style.css
+
 ---
 
 #### Paquetes y funciones
@@ -25,7 +17,7 @@ library(diceR)
 library(factoextra)
 library(FactoMineR)
 library(flextable)
-library(clusterability)
+# library(clusterability)
 source("../helper/helper_tables.R")
 source("../helper/helper_functons.R")
 

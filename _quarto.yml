@@ -39,7 +39,7 @@ website:
       - ensemble_clustering_results.qmd
       - section: "Supplementary materials"
         contents:
-          - Data_preprocessing.Rmd
+          - Data_preprocessing.qmd
           - pre_cluster_analysis.qmd
 
           
