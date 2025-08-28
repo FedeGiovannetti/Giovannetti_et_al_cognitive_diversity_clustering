@@ -71,9 +71,10 @@ mean_sd <- function(variable){
               girls = as.character(sum(Sex == "fem", na.rm = TRUE)),
               Age = mean_sd(Age),
               'Parent education level' = mean_sd(EducacionNES),
-              'Parent ocupation level' = mean_sd(EducacionNES),
+              'Parent ocupation level' = mean_sd(OcupacionNES),
               Housing = mean_sd(ViviendaNES),
-              Overcrowding = mean_sd(HacinamientoNES)
+              Overcrowding = mean_sd(HacinamientoNES),
+              'SES Score' = mean_sd(NES)
               ) %>% 
     pivot_longer(everything()) %>%
     flextable() %>% 
