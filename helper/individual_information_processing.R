@@ -1,9 +1,19 @@
 
 
-datos.socio = read.csv("datos_socio_soldati_PRE.csv")
+datos.socio = read.csv("other data/datos_socio_soldati_PRE.csv")
+datos.hacin = readxl::read_excel("other data/personas y habitaciones PICT 2014.xlsx")
 
+datos.hacin = datos.hacin %>% 
+  mutate(personas_habitacion = CANTPERSONAS/HABITACIONES) %>% 
+  mutate(HacinamientoNES = case_when(
+    
+    personas_habitacion <= 2 ~ 9,
+    personas_habitacion > 2 & personas_habitacion <= 4  ~ 6,    
+    personas_habitacion > 4 & personas_habitacion <= 6  ~ 3,
+    personas_habitacion > 6 ~ 0,   
+  ))
 
-cbq = read.csv("cbq_corrected_PICT_2024_marzo.csv") %>% 
+cbq = read.csv("other data/cbq_corrected_PICT_2024_marzo.csv") %>% 
   select(username, SURGENCY, NEGATIVE_AFFECT, EFFORTFULL_CONTROL)%>%
   # filter(username %in% datos.reducidos$username) %>% 
   distinct(username, .keep_all = T)
@@ -11,7 +21,11 @@ cbq = read.csv("cbq_corrected_PICT_2024_marzo.csv") %>%
 
 datos.socio = datos.socio %>%  
   
-  select(username, SEXO, EDAD_INICIO, EducacionMaterna, Biparental, ViviendaNES, EdadMaterna, PuntajeTotalNES) %>% 
+  left_join(datos.hacin, by = c("username")) %>% 
+  
+  select(username, SEXO, EDAD_INICIO, EducacionMaterna, Biparental, EdadMaterna,
+         EducacionNES, OcupacionNES, ViviendaNES, HacinamientoNES,
+         PuntajeTotalNES) %>% 
   mutate(
     EducacionMaterna = case_when(
       EducacionMaterna <= 3 ~ "Low",
@@ -38,12 +52,11 @@ datos.socio = datos.socio %>%
   rename('NES' = "PuntajeTotalNES") %>% 
   rename(Surgency = "SURGENCY") %>% 
   rename('Negative affect' = "NEGATIVE_AFFECT") %>% 
-  rename('Effortful control' = "EFFORTFULL_CONTROL") %>% 
-  select(-ViviendaNES)
+  rename('Effortful control' = "EFFORTFULL_CONTROL") 
   
 
 
-write.csv(datos.socio, "subject_information_PICT2014.csv", row.names = F)
+write.csv(datos.socio, "data/subject_information_PICT2014.csv", row.names = F)
 
 
 #### Posible imputación de datos socio
@@ -68,7 +81,7 @@ write.csv(datos.socio, "subject_information_PICT2014.csv", row.names = F)
 # 
 # colSums(is.na(datos.para.imputar))
 
-cbq2017 = openxlsx::read.xlsx("Base CBQ Villa Soldati 2017.xlsx") %>% 
+cbq2017 = readxl::read_excel("Base CBQ Villa Soldati 2017.xlsx") %>% 
   select(-EDAD) %>% 
   rename(username = "CASO")
 

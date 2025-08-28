@@ -202,5 +202,38 @@
       "Supplementary materials",
       "Data Pre-processing"
     ]
+  },
+  {
+    "objectID": "ensemble_clustering_results.html#table-s1.-sample-information",
+    "href": "ensemble_clustering_results.html#table-s1.-sample-information",
+    "title": "Main Analyses",
+    "section": "0. Table S1. Sample information",
+    "text": "0. Table S1. Sample information\n\n\nCode\nmean_sd &lt;- function(variable){\n  \n  paste(\n    round(\n      mean(variable, na.rm = TRUE),\n      digits = 2),\n    \" (\",\n    \n    round(\n      sd(variable, na.rm = TRUE),\n      digits = 2),\n    \")\",\n    \n    sep = \"\")\n  \n}\n\n\n\n  datos.reducidos %&gt;% \n    left_join(subject_info, by = \"username\") %&gt;% \n    summarise(n = as.character(n()),\n              girls = as.character(sum(Sex == \"fem\", na.rm = TRUE)),\n              Age = mean_sd(Age),\n              'Parent education level' = mean_sd(EducacionNES),\n              'Parent ocupation level' = mean_sd(EducacionNES),\n              Housing = mean_sd(ViviendaNES),\n              Overcrowding = mean_sd(HacinamientoNES)\n              ) %&gt;% \n    pivot_longer(everything()) %&gt;%\n    flextable() %&gt;% \n    # custom_flextable(\"\")%&gt;%\n    set_header_labels(name = \"Table S1. Sample information\", value = \"\") %&gt;%  # Remove column names\n    \n \n    autofit() %&gt;% \n    footnote(\n      i = 4:5, \n      j = 1,\n      ref_symbols = \"a\",\n      value = as_paragraph(\"Highest educational and occupational levels reached by parents (range 0 to 12 points)\")\n      ) %&gt;% \n    footnote(\n      i = 6, \n      j = 1,\n      ref_symbols = \"b\",\n      value = as_paragraph(\"Scale range: 3–12 points, with higher scores for better housing conditions\")\n      )%&gt;% \n    footnote(\n      i = 7, \n      j = 1,\n      ref_symbols = \"c\",\n      value = as_paragraph(\"Scale range: 0–9 points, with higher scores for better conditions.\")\n      )\n\n\nTable S1. Sample informationn106girls51Age5.33 (0.33)Parent education levela6.97 (2.62)Parent ocupation levela6.97 (2.62)Housingb10.37 (1.73)Overcrowdingc7.59 (1.99)aHighest educational and occupational levels reached by parents (range 0 to 12 points)bScale range: 3–12 points, with higher scores for better housing conditionscScale range: 0–9 points, with higher scores for better conditions.",
+    "crumbs": [
+      "Index",
+      "Main Analyses"
+    ]
+  },
+  {
+    "objectID": "ensemble_clustering_results.html#table-s2.-comparison-of-sex-between-clusters",
+    "href": "ensemble_clustering_results.html#table-s2.-comparison-of-sex-between-clusters",
+    "title": "Main Analyses",
+    "section": "3.1. Table S2. Comparison of Sex between clusters",
+    "text": "3.1. Table S2. Comparison of Sex between clusters\n\n\nCode\nvars = c(\"Sex\")\n\n\nsubject_info %&gt;%\n  summarise(across(all_of(vars), ~ list(fisher.test(table(Clusters, .x),\n                                                    simulate.p.value = T, B = 100000))))%&gt;%\n    # summarise(across(all_of(vars), ~ list(chisq.test(table(Clusters, .x)))))%&gt;% \n  pivot_longer(cols = everything(), names_to = \"Variables\", values_to = \"test\") %&gt;% \n  rowwise()%&gt;% \n  mutate(p.value = test$p.value) %&gt;% \n   left_join(\n    subject_info %&gt;% \n      summarise(across(all_of(vars), ~sum(!is.na(.x)))) %&gt;% \n      pivot_longer(cols = everything(), names_to = \"Variables\", values_to = \"n\") \n    ) %&gt;% \n  select(-test) %&gt;%\n  custom_flextable(\"Comparison of socioeconomic status variables between clusters (Fisher's exact test)\") %&gt;% \n  bold(j = ~p.value, i = ~p.value &lt; .05) \n\n\nVariablesp.valuenSex0.471105",
+    "crumbs": [
+      "Index",
+      "Main Analyses"
+    ]
+  },
+  {
+    "objectID": "ensemble_clustering_results.html#table-s3.-comparison-of-temperamental-and-contextual-variables-between-clusters-kruskal-walliss-test",
+    "href": "ensemble_clustering_results.html#table-s3.-comparison-of-temperamental-and-contextual-variables-between-clusters-kruskal-walliss-test",
+    "title": "Main Analyses",
+    "section": "3.2. Table S3. Comparison of temperamental and contextual variables between clusters (Kruskal Wallis’s test)",
+    "text": "3.2. Table S3. Comparison of temperamental and contextual variables between clusters (Kruskal Wallis’s test)\n\n\nCode\nvars = c(\"Age\", \"NES\", \"Surgency\", \"Effortful control\", \"Negative affect\")\n\ndatos.summarised.info =  subject_info %&gt;%\n  select(Clusters, all_of(vars)) %&gt;%\n  pivot_longer(-Clusters,names_to = \"Variables\", values_to = \"value\") %&gt;%\n  \n  group_by(Clusters, Variables) %&gt;% \n  summarise(Mean = mean(value, na.rm = T),\n            SD = sd(value, na.rm = T),\n            n = sum(!is.na(value))\n            ) %&gt;% \n  ungroup() %&gt;% \n  select(Variables, Clusters, everything()) %&gt;% \n  arrange(Variables)\n\n\nkruskal.info = subject_info %&gt;%\n  summarise(across(all_of(vars), ~ list(kruskal.test(.x, Clusters))))%&gt;% \n  pivot_longer(cols = everything(), names_to = \"Variables\", values_to = \"test\") %&gt;% \n  rowwise()%&gt;% \n  mutate(statistic = test$statistic,p.value = test$p.value) %&gt;% \n  select(-test)\n\n\n\ndatos.summarised.info %&gt;% \n  left_join(kruskal.info, by = \"Variables\") %&gt;% \n  mutate(Variables = factor(Variables, levels = vars)) %&gt;%\n  arrange(Variables) %&gt;% \n  custom_flextable(\"Table S2. Comparison of individual and contextual variables between clusters (Kurskal Wallis's test)\") %&gt;%\n  bold(j = 7,~ `p.value` &lt; .05) %&gt;%\n  mk_par(j = 7,i = ~`p.value` &lt; .001, value = as_paragraph(\"&lt;.001\")) %&gt;%\n  merge_v(j = c(1,6:7)) %&gt;%\n  valign(valign = \"top\")\n\n\nVariablesClustersMeanSDnstatisticp.valueAgeCluster 15.3530.372371.6260.444Cluster 25.3910.34420Cluster 35.2870.28639NESCluster 129.0004.749371.8890.389Cluster 229.6193.94321Cluster 328.2824.95239SurgencyCluster 14.6980.760376.8380.033Cluster 24.3210.44320Cluster 34.4730.74539Effortful controlCluster 15.3090.579370.8790.645Cluster 25.3690.59620Cluster 35.1950.63539Negative affectCluster 14.8300.804370.3020.86Cluster 24.8370.61020Cluster 34.7730.76239\n\n\n\n\nCode\npairwise.wilcox.test(subject_info$Surgency, subject_info$Clusters, p.adjust.method = \"holm\") %&gt;% \n  broom::tidy() %&gt;%\n        mutate(contrasts = paste(group2, \"vs.\", group1)) %&gt;%\n        select(contrasts, p.value) %&gt;%\n        pivot_wider(names_from = contrasts, values_from = p.value) %&gt;% \n  mutate(Variable = c(\"Surgency\")) %&gt;% \n  select(Variable, everything()) %&gt;% \n\n\n  custom_flextable(\"Pairwise comparisons for clustering result\") %&gt;% \n  bold(j = 2,~ `Cluster 1 vs. Cluster 2` &lt; .05) %&gt;% \n  bold(j = 3,~ `Cluster 1 vs. Cluster 3` &lt; .05)%&gt;% \n  bold(j = 4,~ `Cluster 2 vs. Cluster 3` &lt; .05) %&gt;% \n  mk_par(j = 2,i = ~`Cluster 1 vs. Cluster 2` &lt; .001, value = as_paragraph(\"&lt;.001\")) %&gt;%\n  mk_par(j = 3,i = ~`Cluster 1 vs. Cluster 3` &lt; .001, value = as_paragraph(\"&lt;.001\")) %&gt;%\n  mk_par(j = 4,i = ~`Cluster 2 vs. Cluster 3` &lt; .001, value = as_paragraph(\"&lt;.001\")) %&gt;%\n  merge_v(j = 1:2) %&gt;% \n  valign(valign = \"top\")\n\n\nVariableCluster 1 vs. Cluster 2Cluster 1 vs. Cluster 3Cluster 2 vs. Cluster 3Surgency0.0280.1650.432",
+    "crumbs": [
+      "Index",
+      "Main Analyses"
+    ]
   }
 ]

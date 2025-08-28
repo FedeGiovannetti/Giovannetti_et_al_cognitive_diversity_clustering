@@ -42,6 +42,71 @@ subject_info <- read.csv("../data/subject_information_PICT2014.csv", check.names
 ```
 
 
+## 0. Table S1. Sample information
+
+```{r sample info}
+
+mean_sd <- function(variable){
+  
+  paste(
+    round(
+      mean(variable, na.rm = TRUE),
+      digits = 2),
+    " (",
+    
+    round(
+      sd(variable, na.rm = TRUE),
+      digits = 2),
+    ")",
+    
+    sep = "")
+  
+}
+
+
+
+  datos.reducidos %>% 
+    left_join(subject_info, by = "username") %>% 
+    summarise(n = as.character(n()),
+              girls = as.character(sum(Sex == "fem", na.rm = TRUE)),
+              Age = mean_sd(Age),
+              'Parent education level' = mean_sd(EducacionNES),
+              'Parent ocupation level' = mean_sd(EducacionNES),
+              Housing = mean_sd(ViviendaNES),
+              Overcrowding = mean_sd(HacinamientoNES)
+              ) %>% 
+    pivot_longer(everything()) %>%
+    flextable() %>% 
+    # custom_flextable("")%>%
+    set_header_labels(name = "Table S1. Sample information", value = "") %>%  # Remove column names
+    
+ 
+    autofit() %>% 
+    footnote(
+      i = 4:5, 
+      j = 1,
+      ref_symbols = "a",
+      value = as_paragraph("Highest educational and occupational levels reached by parents (range 0 to 12 points)")
+      ) %>% 
+    footnote(
+      i = 6, 
+      j = 1,
+      ref_symbols = "b",
+      value = as_paragraph("Scale range: 3–12 points, with higher scores for better housing conditions")
+      )%>% 
+    footnote(
+      i = 7, 
+      j = 1,
+      ref_symbols = "c",
+      value = as_paragraph("Scale range: 0–9 points, with higher scores for better conditions.")
+      )
+   
+
+
+
+```
+
+
 # 1. Ensemble model
 
 
@@ -369,7 +434,7 @@ subject_info = subject_info %>%
 
 ```
 
-## 3.1. Table S1. Comparison of Sex between clusters 
+## 3.1. Table S2. Comparison of Sex between clusters 
 
 ```{r}
 
@@ -397,7 +462,7 @@ subject_info %>%
 
 
 
-## 3.2. Table S2. Comparison of temperamental and contextual variables between clusters (Kruskal Wallis's test)
+## 3.2. Table S3. Comparison of temperamental and contextual variables between clusters (Kruskal Wallis's test)
 
 ```{r}
 
