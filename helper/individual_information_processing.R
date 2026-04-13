@@ -25,7 +25,7 @@ datos.socio = datos.socio %>%
   
   select(username, SEXO, EDAD_INICIO, EducacionMaterna, Biparental, EdadMaterna,
          EducacionNES, OcupacionNES, ViviendaNES, HacinamientoNES,
-         PuntajeTotalNES) %>% 
+         PuntajeTotalNES, INDICADORES) %>% 
   mutate(
     EducacionMaterna = case_when(
       EducacionMaterna <= 3 ~ "Low",
@@ -52,7 +52,8 @@ datos.socio = datos.socio %>%
   rename('NES' = "PuntajeTotalNES") %>% 
   rename(Surgency = "SURGENCY") %>% 
   rename('Negative affect' = "NEGATIVE_AFFECT") %>% 
-  rename('Effortful control' = "EFFORTFULL_CONTROL") 
+  rename('Effortful control' = "EFFORTFULL_CONTROL") %>% 
+  rename('UBNindicators' = "INDICADORES") 
   
 
 

@@ -25,6 +25,7 @@ library(diceR)
 library(flextable)
 library(rstatix)
 library(ggpubr)
+library(ggtext)
 source("helper/helper_tables.R")
 source("helper/helper_functons.R")
 
@@ -42,7 +43,7 @@ subject_info <- read.csv("../data/subject_information_PICT2014.csv", check.names
 ```
 
 
-## 0. Table S1. Sample information
+## 0. Table 1. Sample information
 
 ```{r sample info}
 
@@ -65,7 +66,7 @@ mean_sd <- function(variable){
 
 
 
-  datos.reducidos %>% 
+  (Table1 <- datos.reducidos %>% 
     left_join(subject_info, by = "username") %>% 
     summarise(n = as.character(n()),
               girls = as.character(sum(Sex == "fem", na.rm = TRUE)),
@@ -74,12 +75,15 @@ mean_sd <- function(variable){
               'Parent ocupation level' = mean_sd(OcupacionNES),
               Housing = mean_sd(ViviendaNES),
               Overcrowding = mean_sd(HacinamientoNES),
-              'SES Score' = mean_sd(NES)
+              'SES Score' = mean_sd(NES),
+              'UBN' = paste(
+                round(mean(UBN, na.rm = T)*100, digits = 2),
+                "%")
               ) %>% 
     pivot_longer(everything()) %>%
     flextable() %>% 
     # custom_flextable("")%>%
-    set_header_labels(name = "Table S1. Sample information", value = "") %>%  # Remove column names
+    set_header_labels(name = "Table 1. Sample information", value = "") %>%  # Remove column names
     
  
     autofit() %>% 
@@ -100,18 +104,23 @@ mean_sd <- function(variable){
       j = 1,
       ref_symbols = "c",
       value = as_paragraph("Scale range: 0–9 points, with higher scores for better conditions.")
-      )
+      ))
    
 
+
+save_table(Table1, "Tables/Table_1.docx")
 
 
 ```
 
 
+
+
+
 # 1. Ensemble model
 
 
-```{r, message= F}
+```{r ensemble model, message= F}
 
 
 Ensemble_model = dice(datos,
@@ -143,9 +152,9 @@ table(datos_clusters$Clusters) %>%
 
 # 2. Cluster comparisons
 
-## 2.1.Table 1. Descriptive and inferential analyses for clustering result
+## 2.1.Table 2. Descriptive and inferential analyses for clustering result
 
-```{r}
+```{r clustering descriptive table}
 
 # Transform to long format
 
@@ -210,7 +219,7 @@ datos.plot = datos.summarised.z %>%
   
 
 # Tidyverse pipeline
-(Table1 <- datos.summarised %>%
+(Table2 <- datos.summarised %>%
   left_join(datos.kruskal.z, by = c("Feature")) %>% 
   arrange(factor(Feature, levels = feature_order)) %>% 
   mutate(Task = gsub("_.*", "", Feature)) %>%  # Extract task name
@@ -229,17 +238,17 @@ datos.plot = datos.summarised.z %>%
 
 
 
-save_table(Table1, "Tables/Table_1.docx")
+save_table(Table2, "Tables/Table_2.docx")
 
 
 ```
 
-## 2.2.Table 2. Pairwise comparisons for clustering result.
+## 2.2.Table 3. Pairwise comparisons for clustering result.
 
-```{r}
+```{r cognitive pairwise comparisons}
 
 
-(Table2 <- datos.long.z %>%
+(Table3 <- datos.long.z %>%
   group_by(Feature) %>%
   nest() %>%
   mutate(
@@ -325,7 +334,7 @@ save_table(Table1, "Tables/Table_1.docx")
    autofit()
 )
 
-save_table(Table2, "Tables/Table_2.docx")
+save_table(Table3, "Tables/Table_3.docx")
 
 ```
 
@@ -333,7 +342,7 @@ save_table(Table2, "Tables/Table_2.docx")
 ## 2.3.Figure 1. Feature comparisons between subjects
 
 
-```{r, fig.width= 8, fig.height=6}
+```{r cognitive comparison plot, fig.width= 8, fig.height=6}
 
 plot.caracteristicas = function(df){
   
@@ -348,8 +357,22 @@ plot.caracteristicas = function(df){
       geom_line(linewidth = 1.5, alpha = 0.5)+
       geom_errorbar(aes(ymin = Mean - SE,
                         ymax = Mean + SE), 
+                    show.legend = FALSE,
                     alpha = 0.8)+
       geom_text(aes(y = 1.5), color = "black")+
+      scale_color_discrete(
+        name = "Clusters",
+        labels = c(
+          "Cluster 1" = "**Cluster 1**<br>(Working memory<br>low-performance group)",
+          "Cluster 2" = "**Cluster 2**<br>(Generalized<br>high-performance group)",
+          "Cluster 3" = "**Cluster 3**<br>(Generalized<br>low-performance group)"
+        ),
+        guide = guide_legend(
+          label.position = "bottom",
+          override.aes = list(linewidth = 1)
+        )
+      )+
+
 
       coord_flip(ylim = c(-1.5,1.5))+
       theme_minimal(base_size = 15) +
@@ -357,7 +380,9 @@ plot.caracteristicas = function(df){
         theme(
           # legend.position = c(0.5, 0.5),  # Position legend at bottom-left
           legend.justification = c(0.7, 0),  # Align legend to bottom-left
-          axis.title.y = element_blank()  # Remove y-axis title
+          axis.title.y = element_blank(),  # Remove y-axis title
+          legend.text.align = 0.5,
+          legend.text = element_markdown(lineheight = 1.2) # markdown rendering
         )
 }
 
@@ -416,7 +441,6 @@ plot.RT = datos.plot %>%
   
   theme(plot.margin = margin(0.5,0,0,0.5, "cm")))
 
-
 Figure1%>%
   ggexport(filename = "Figures/Figure1.png", width = 720, height = 720)
 
@@ -426,7 +450,7 @@ Figure1%>%
 
 # 3. Comparison of socioeconomic status variables between clusters
 
-```{r}
+```{r subject info selection}
 
 subject_info = subject_info %>% 
   left_join(datos_clusters, by = "username") %>% 
@@ -435,9 +459,9 @@ subject_info = subject_info %>%
 
 ```
 
-## 3.1. Table S2. Comparison of Sex between clusters 
+## 3.1. Table S1. Comparison of Sex between clusters 
 
-```{r}
+```{r sex between clusters}
 
 vars = c("Sex")
 
@@ -463,9 +487,9 @@ subject_info %>%
 
 
 
-## 3.2. Table S3. Comparison of temperamental and contextual variables between clusters (Kruskal Wallis's test)
+## 3.2. Table S4. Comparison of temperamental and contextual variables between clusters (Kruskal Wallis's test)
 
-```{r}
+```{r subject info between clusters}
 
 
 vars = c("Age", "NES", "Surgency", "Effortful control", "Negative affect")
@@ -507,34 +531,4 @@ datos.summarised.info %>%
 
 ```
 
-
-
-```{r}
-
-
-pairwise.wilcox.test(subject_info$Surgency, subject_info$Clusters, p.adjust.method = "holm") %>% 
-  broom::tidy() %>%
-        mutate(contrasts = paste(group2, "vs.", group1)) %>%
-        select(contrasts, p.value) %>%
-        pivot_wider(names_from = contrasts, values_from = p.value) %>% 
-  mutate(Variable = c("Surgency")) %>% 
-  select(Variable, everything()) %>% 
-
-
-  custom_flextable("Pairwise comparisons for clustering result") %>% 
-  bold(j = 2,~ `Cluster 1 vs. Cluster 2` < .05) %>% 
-  bold(j = 3,~ `Cluster 1 vs. Cluster 3` < .05)%>% 
-  bold(j = 4,~ `Cluster 2 vs. Cluster 3` < .05) %>% 
-  mk_par(j = 2,i = ~`Cluster 1 vs. Cluster 2` < .001, value = as_paragraph("<.001")) %>%
-  mk_par(j = 3,i = ~`Cluster 1 vs. Cluster 3` < .001, value = as_paragraph("<.001")) %>%
-  mk_par(j = 4,i = ~`Cluster 2 vs. Cluster 3` < .001, value = as_paragraph("<.001")) %>%
-  merge_v(j = 1:2) %>% 
-  valign(valign = "top")
-
-
-
-
-
-
-```
 

@@ -18,8 +18,8 @@ library(factoextra)
 library(FactoMineR)
 library(flextable)
 # library(clusterability)
-source("../helper/helper_tables.R")
-source("../helper/helper_functons.R")
+source("helper/helper_tables.R")
+source("helper/helper_functons.R")
 
 
 ```
@@ -35,7 +35,7 @@ subject.info <- read.csv("../data/subject_information_PICT2014.csv")
 
 ```
 
-## 0.0. Sample information
+## 0.1. Sample information
 
 ```{r sample info}
 
@@ -65,6 +65,69 @@ subject.info <- read.csv("../data/subject_information_PICT2014.csv")
 
 ```
 
+## 0.2. Chronbach's Alpha for CBQ
+
+```{r}
+
+cbq_items = read.csv("../data/cbq_coded_corrected_PICT2014.csv")%>% 
+  # I'll keep only the selected cases
+  filter(username %in% datos.reducidos$username) %>% 
+  arrange(username)    # Select only the items for alpha
+
+## CBQ items
+
+cbq_dimensions = list(
+  
+  Surgency = c("X1", "X4", "X7", "X10", "X13",
+               "X16", "X19", "X22", "X25", "X28",
+               "X31", "X34"),
+
+  Negative_affect = c("X2", "X5", "X8", "X11",
+                      "X14", "X17", "X20", "X23",
+                      "X26", "X29", "X32", "X35"),
+
+  Effortful_control = c("X3", "X6", "X9", "X12",
+                        "X15", "X18", "X21", "X24",
+                        "X27", "X30", "X33", "X36")
+  
+)
+
+## Function for efficient calculation
+
+alpha_calc = function(dimension, data){
+  
+  capture.output({
+    alpha_out <- data %>% 
+      select(all_of(dimension)) %>% 
+      psych::alpha() %>% 
+      suppressMessages() %>% 
+      suppressWarnings()
+  
+})
+  
+  alpha_df = alpha_out$total %>% 
+    # mutate(Dimension = names(dimension)) %>% 
+    select(raw_alpha, std.alpha) %>% 
+    rename(Alpha = raw_alpha,
+           'Alpha (std)' = std.alpha)
+  
+ return(alpha_df)
+  
+}
+
+## Table output
+
+
+map(.x = cbq_dimensions, .f = ~alpha_calc(.x, cbq_items)) %>%
+  list_rbind(names_to = "Dimension") %>% 
+    remove_rownames() %>% 
+  mutate(Dimension = stringr::str_replace(Dimension, "_", " "))%>%
+    # flextable() %>% 
+    custom_flextable("Cronbach's Alpha for CBQ") %>% 
+ 
+    autofit() 
+
+```
 
 
 
